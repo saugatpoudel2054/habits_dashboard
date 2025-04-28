@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import os
 from datetime import datetime, timedelta
+import os
 
 from src.google_sheets import fetch_data, get_data_range
-from src.data_processor import clean_data, calculate_sleep_duration, calculate_rolling_averages, get_streaks
+from src.data_processor import clean_data, calculate_sleep_duration, calculate_rolling_averages
 from src.visualization import create_dashboard_charts
 from src.config import DATE_COL, WAKE_UP_COL, SLEEP_COL, WEIGHT_COL, DEFAULT_DATE_RANGE
 
@@ -198,4 +197,11 @@ st.sidebar.info(
     It provides insights about your sleep patterns, weight trends, and other health metrics."""
 )
 
-# Run the app with: streamlit run src/app.py
+def main():
+    # This function serves as an entry point for the package
+    # The actual app is run by streamlit
+    print("To run the dashboard, use: streamlit run src/app.py")
+    
+if __name__ == "__main__":
+    # When run directly, the Streamlit command will take over
+    pass

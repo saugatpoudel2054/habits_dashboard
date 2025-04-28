@@ -1,6 +1,7 @@
 import os
+import json
+
 import pandas as pd
-from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -17,7 +18,8 @@ def get_credentials():
     """Get valid user credentials from storage or initiate OAuth2 flow."""
     creds = None
     if os.path.exists(TOKEN_PATH):
-        creds = Credentials.from_authorized_user_info(eval(open(TOKEN_PATH).read()), SCOPES)
+        with open(TOKEN_PATH, 'r', encoding='utf-8') as token_file:
+            creds = Credentials.from_authorized_user_info(json.loads(token_file.read()), SCOPES)
     
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -29,13 +31,13 @@ def get_credentials():
             creds = flow.run_local_server(port=0)
         
         # Save the credentials for the next run
-        with open(TOKEN_PATH, 'w') as token:
-            token.write(str(creds.to_json()))
+        with open(TOKEN_PATH, 'w', encoding='utf-8') as token_file:
+            token_file.write(json.dumps(creds.to_json()))
     
     return creds
 
 
-def fetch_data():
+def fetch_data() -> pd.DataFrame:
     """Fetch data from Google Sheet and return as DataFrame."""
     try:
         creds = get_credentials()
@@ -67,7 +69,7 @@ def fetch_data():
         return pd.DataFrame()
 
 
-def get_data_range(df, days=30):
+def get_data_range(df: pd.DataFrame, days: int = 30) -> pd.DataFrame:
     """Get data for the last specified number of days."""
     if DATE_COL not in df.columns or df.empty:
         return df
