@@ -1,12 +1,19 @@
-import streamlit as st
-import pandas as pd
-from datetime import datetime, timedelta
+""" The main app runner file"""
 import os
+import sys
+from datetime import datetime, timedelta
 
+# Add parent directory to path if running as standalone script
+if __name__ == "__main__":
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pandas as pd
+import streamlit as st
+
+from src.config import DATE_COL, DEFAULT_DATE_RANGE, SLEEP_COL, WAKE_UP_COL, WEIGHT_COL
+from src.data_processor import calculate_rolling_averages, calculate_sleep_duration, clean_data
 from src.google_sheets import fetch_data, get_data_range
-from src.data_processor import clean_data, calculate_sleep_duration, calculate_rolling_averages
 from src.visualization import create_dashboard_charts
-from src.config import DATE_COL, WAKE_UP_COL, SLEEP_COL, WEIGHT_COL, DEFAULT_DATE_RANGE
 
 # Page configuration
 st.set_page_config(page_title="Daily Routine Dashboard", page_icon="📊", layout="wide")

@@ -1,12 +1,12 @@
+""" Visualization related code"""
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+import seaborn as sns
 
-from src.config import DATE_COL, WAKE_UP_COL, SLEEP_COL, WEIGHT_COL, VIS_DATE_FORMAT
+from src.config import DATE_COL, SLEEP_COL, VIS_DATE_FORMAT, WAKE_UP_COL, WEIGHT_COL
 
 
 def time_to_decimal(t):

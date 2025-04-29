@@ -1,5 +1,10 @@
-import os
 import json
+import os
+import sys
+
+# Add parent directory to path if running as standalone script
+if __name__ == "__main__":
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pandas as pd
 from google.auth.transport.requests import Request
@@ -8,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from src.config import CREDENTIALS_PATH, TOKEN_PATH, SHEET_ID, RANGE_NAME, DATE_COL
+from src.config import CREDENTIALS_PATH, DATE_COL, RANGE_NAME, SHEET_ID, TOKEN_PATH
 
 # If modifying these scopes, delete the token.json file.
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
@@ -18,8 +23,13 @@ def get_credentials():
     """Get valid user credentials from storage or initiate OAuth2 flow."""
     creds = None
     if os.path.exists(TOKEN_PATH):
-        with open(TOKEN_PATH, 'r', encoding='utf-8') as token_file:
-            creds = Credentials.from_authorized_user_info(json.loads(token_file.read()), SCOPES)
+        try:
+            with open(TOKEN_PATH, 'r', encoding='utf-8') as token_file:
+                token_data = json.loads(token_file.read())
+                creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            print(f"Error reading token file: {e}")
+            # Token file exists but is invalid, we'll create a new one
     
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -32,7 +42,7 @@ def get_credentials():
         
         # Save the credentials for the next run
         with open(TOKEN_PATH, 'w', encoding='utf-8') as token_file:
-            token_file.write(json.dumps(creds.to_json()))
+            token_file.write(creds.to_json())
     
     return creds
 
@@ -59,7 +69,19 @@ def fetch_data() -> pd.DataFrame:
         
         # Convert date strings to datetime objects
         if DATE_COL in df.columns:
-            df[DATE_COL] = pd.to_datetime(df[DATE_COL])
+            try:
+                # Try with format YYYY/MM/DD
+                df[DATE_COL] = pd.to_datetime(df[DATE_COL], format='%Y/%m/%d')
+            except ValueError:
+                # If that fails, try with format MM/DD/YYYY
+                try:
+                    df[DATE_COL] = pd.to_datetime(df[DATE_COL], format='%m/%d/%Y')
+                except ValueError:
+                    # If both fail, try with a more flexible approach
+                    df[DATE_COL] = pd.to_datetime(df[DATE_COL], errors='coerce')
+                    
+            # Sort by date and remove rows with invalid dates
+            df = df.dropna(subset=[DATE_COL])
             df = df.sort_values(by=DATE_COL)  # Sort by date
         
         return df
