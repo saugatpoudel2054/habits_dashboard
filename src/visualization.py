@@ -39,15 +39,14 @@ def plot_time_series(df, column, title, y_label, rolling_window=7, figsize=(12, 
     return fig
 
 
-def plot_sleep_wake_patterns(df, figsize=(12, 8)):
-    """Plot sleep and wake up times on a 24-hour cycle."""
-    if df.empty or 'sleep_time' not in df.columns or 'wake_up_time' not in df.columns:
+def plot_wake_up_pattern(df, figsize=(12, 6)):
+    """Plot wake up times on a 24-hour cycle."""
+    if df.empty or 'wake_up_time' not in df.columns:
         return None
     
     # Convert time objects to decimal hours for plotting
     df = df.copy()
     df['wake_decimal'] = df['wake_up_time'].apply(time_to_decimal)
-    df['sleep_decimal'] = df['sleep_time'].apply(time_to_decimal)
     
     # Create figure
     fig = go.Figure()
@@ -61,6 +60,57 @@ def plot_sleep_wake_patterns(df, figsize=(12, 8)):
         marker=dict(size=8)
     ))
     
+    # Helper function to convert decimal hours to 12-hour format with AM/PM
+    def format_time_12hr(decimal_hour):
+        hour = int(decimal_hour)
+        minute = int((decimal_hour % 1) * 60)
+        period = "AM" if hour < 12 else "PM"
+        # Convert to 12-hour format
+        hour_12 = hour % 12
+        if hour_12 == 0:
+            hour_12 = 12
+        return f"{hour_12}:{minute:02d} {period}"
+    
+    # Get tick values and labels for 30-minute intervals
+    tick_vals = [i/2 for i in range(0, 49)]  # 0, 0.5, 1, 1.5, ..., 24
+    tick_texts = [format_time_12hr(val) for val in tick_vals]
+    
+    # Set y-axis to show time format
+    fig.update_layout(
+        title='Wake Up Pattern',
+        xaxis_title='Date',
+        yaxis_title='Time',
+        yaxis=dict(
+            tickmode='array',
+            tickvals=tick_vals,
+            ticktext=tick_texts,
+            gridcolor='lightgray',
+            minor_showgrid=True,
+            autorange='reversed'  # This reverses the y-axis so earlier times are at the top
+        ),
+        xaxis=dict(
+            type='date',
+            tickformat='%b %d\n%Y',  # Format: May 01, 2025
+            dtick='D1'  # Show one tick per day
+        ),
+        template='plotly_white'
+    )
+    
+    return fig
+
+
+def plot_sleep_pattern(df, figsize=(12, 6)):
+    """Plot sleep times on a 24-hour cycle."""
+    if df.empty or 'sleep_time' not in df.columns:
+        return None
+    
+    # Convert time objects to decimal hours for plotting
+    df = df.copy()
+    df['sleep_decimal'] = df['sleep_time'].apply(time_to_decimal)
+    
+    # Create figure
+    fig = go.Figure()
+    
     # Add sleep times
     fig.add_trace(go.Scatter(
         x=df[DATE_COL], y=df['sleep_decimal'],
@@ -70,15 +120,38 @@ def plot_sleep_wake_patterns(df, figsize=(12, 8)):
         marker=dict(size=8)
     ))
     
+    # Helper function to convert decimal hours to 12-hour format with AM/PM
+    def format_time_12hr(decimal_hour):
+        hour = int(decimal_hour)
+        minute = int((decimal_hour % 1) * 60)
+        period = "AM" if hour < 12 else "PM"
+        # Convert to 12-hour format
+        hour_12 = hour % 12
+        if hour_12 == 0:
+            hour_12 = 12
+        return f"{hour_12}:{minute:02d} {period}"
+    
+    # Get tick values and labels for 30-minute intervals
+    tick_vals = [i/2 for i in range(0, 49)]  # 0, 0.5, 1, 1.5, ..., 24
+    tick_texts = [format_time_12hr(val) for val in tick_vals]
+    
     # Set y-axis to show time format
     fig.update_layout(
-        title='Sleep and Wake Up Patterns',
+        title='Sleep Pattern',
         xaxis_title='Date',
-        yaxis_title='Time (24-hour)',
+        yaxis_title='Time',
         yaxis=dict(
             tickmode='array',
-            tickvals=list(range(0, 25, 2)),
-            ticktext=[f'{i:02d}:00' for i in range(0, 25, 2)]
+            tickvals=tick_vals,
+            ticktext=tick_texts,
+            gridcolor='lightgray',
+            minor_showgrid=True,
+            autorange='reversed'  # This reverses the y-axis so earlier times are at the top
+        ),
+        xaxis=dict(
+            type='date',
+            tickformat='%b %d\n%Y',  # Format: May 01, 2025
+            dtick='D1'  # Show one tick per day
         ),
         template='plotly_white'
     )
@@ -117,7 +190,14 @@ def plot_sleep_duration(df, figsize=(12, 6)):
         font=dict(color="red")
     )
     
-    fig.update_layout(template='plotly_white')
+    fig.update_layout(
+        template='plotly_white',
+        xaxis=dict(
+            type='date',
+            tickformat='%b %d\n%Y',  # Format: May 01, 2025
+            dtick='D1'  # Show one tick per day
+        )
+    )
     
     return fig
 
@@ -140,7 +220,14 @@ def plot_weight_trend(df, figsize=(12, 6)):
     fig.add_scatter(x=df[DATE_COL], y=rolling_avg, mode='lines', 
                     name='7-day Average', line=dict(width=2, color='green'))
     
-    fig.update_layout(template='plotly_white')
+    fig.update_layout(
+        template='plotly_white',
+        xaxis=dict(
+            type='date',
+            tickformat='%b %d\n%Y',  # Format: May 01, 2025
+            dtick='D1'  # Show one tick per day
+        )
+    )
     
     return fig
 
@@ -224,7 +311,8 @@ def create_dashboard_charts(df):
     
     # Sleep metrics
     if 'sleep_time' in df.columns and 'wake_up_time' in df.columns:
-        charts['sleep_pattern'] = plot_sleep_wake_patterns(df)
+        charts['sleep_pattern'] = plot_sleep_pattern(df)
+        charts['wake_up_pattern'] = plot_wake_up_pattern(df)
         
         if 'Sleep Duration (hours)' in df.columns:
             charts['sleep_duration'] = plot_sleep_duration(df)

@@ -29,7 +29,6 @@ st.sidebar.header("Controls")
 
 # Function to load and process data
 def load_data():
-    print('Load Data')
     with st.spinner("Fetching data from Google Sheets..."):
         data = fetch_data()
         if data.empty:
@@ -87,21 +86,25 @@ else:
         st.sidebar.info(f"Total days recorded: {len(filtered_data)}")
         
         # Generate charts
-        print('!!!!!!!!!!!!')
-        print(filtered_data)
         charts = create_dashboard_charts(filtered_data)
         
         # Sleep section
         st.header("Sleep Patterns")
-        col1, col2 = st.columns(2)
         
+        # Create a row for the wake-up pattern chart
+        if 'wake_up_pattern' in charts and charts['wake_up_pattern'] is not None:
+            st.subheader("Wake-up Time Trends")
+            st.plotly_chart(charts['wake_up_pattern'], use_container_width=True)
+        
+        # Create a row for the sleep pattern chart
         if 'sleep_pattern' in charts and charts['sleep_pattern'] is not None:
-            with col1:
-                st.plotly_chart(charts['sleep_pattern'], use_container_width=True)
-                
-            with col2:
-                if 'sleep_duration' in charts and charts['sleep_duration'] is not None:
-                    st.plotly_chart(charts['sleep_duration'], use_container_width=True)
+            st.subheader("Sleep Time Trends")
+            st.plotly_chart(charts['sleep_pattern'], use_container_width=True)
+            
+        # Create a row for sleep duration
+        if 'sleep_duration' in charts and charts['sleep_duration'] is not None:
+            st.subheader("Sleep Duration")
+            st.plotly_chart(charts['sleep_duration'], use_container_width=True)
         
         # Display sleep stats
         if 'sleep_stats' in charts and charts['sleep_stats'] is not None:
