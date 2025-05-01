@@ -83,7 +83,6 @@ def fetch_data() -> pd.DataFrame:
             # Sort by date and remove rows with invalid dates
             df = df.dropna(subset=[DATE_COL])
             df = df.sort_values(by=DATE_COL)  # Sort by date
-        
         return df
 
     except HttpError as err:

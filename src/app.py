@@ -1,7 +1,6 @@
 """ The main app runner file"""
 import os
 import sys
-from datetime import datetime, timedelta
 
 # Add parent directory to path if running as standalone script
 if __name__ == "__main__":
@@ -10,7 +9,7 @@ if __name__ == "__main__":
 import pandas as pd
 import streamlit as st
 
-from src.config import DATE_COL, DEFAULT_DATE_RANGE, SLEEP_COL, WAKE_UP_COL, WEIGHT_COL
+from src.config import DATE_COL, DEFAULT_DATE_RANGE, WAKE_UP_COL, WEIGHT_COL
 from src.data_processor import calculate_rolling_averages, calculate_sleep_duration, clean_data
 from src.google_sheets import fetch_data, get_data_range
 from src.visualization import create_dashboard_charts
@@ -30,6 +29,7 @@ st.sidebar.header("Controls")
 
 # Function to load and process data
 def load_data():
+    print('Load Data')
     with st.spinner("Fetching data from Google Sheets..."):
         data = fetch_data()
         if data.empty:
@@ -47,7 +47,8 @@ def load_data():
         return data
 
 # Check if credentials exist
-creds_exist = os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'credentials', 'credentials.json'))
+creds_exist = os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                         'credentials', 'credentials.json'))
 
 if not creds_exist:
     st.warning(
@@ -85,110 +86,98 @@ else:
         st.sidebar.info(f"Data range: {filtered_data[DATE_COL].min().strftime('%Y-%m-%d')} to {filtered_data[DATE_COL].max().strftime('%Y-%m-%d')}")
         st.sidebar.info(f"Total days recorded: {len(filtered_data)}")
         
-        # Create tabs for different visualizations
-        tabs = st.tabs(["Sleep", "Weight", "Overview", "Data"])
-        
         # Generate charts
+        print('!!!!!!!!!!!!')
+        print(filtered_data)
         charts = create_dashboard_charts(filtered_data)
         
-        # Sleep tab
-        with tabs[0]:
-            st.subheader("Sleep Patterns")
-            col1, col2 = st.columns(2)
-            
-            if 'sleep_pattern' in charts and charts['sleep_pattern'] is not None:
-                with col1:
-                    st.plotly_chart(charts['sleep_pattern'], use_container_width=True)
-            
-            if 'sleep_duration' in charts and charts['sleep_duration'] is not None:
-                with col2:
+        # Sleep section
+        st.header("Sleep Patterns")
+        col1, col2 = st.columns(2)
+        
+        if 'sleep_pattern' in charts and charts['sleep_pattern'] is not None:
+            with col1:
+                st.plotly_chart(charts['sleep_pattern'], use_container_width=True)
+                
+            with col2:
+                if 'sleep_duration' in charts and charts['sleep_duration'] is not None:
                     st.plotly_chart(charts['sleep_duration'], use_container_width=True)
+        
+        # Display sleep stats
+        if 'sleep_stats' in charts and charts['sleep_stats'] is not None:
+            st.write(charts['sleep_stats'])
+        
+        # Weight section
+        st.header("Weight Tracking")
+        
+        if 'weight_trend' in charts and charts['weight_trend'] is not None:
+            st.plotly_chart(charts['weight_trend'], use_container_width=True)
+        
+        st.subheader("Weight Statistics")
+        if filtered_data is not None and WEIGHT_COL in filtered_data.columns:
+            # Only include rows where weight is not null
+            weight_df = filtered_data[filtered_data[WEIGHT_COL].notna()]
             
-            if 'sleep_duration_trend' in charts and charts['sleep_duration_trend'] is not None:
-                st.plotly_chart(charts['sleep_duration_trend'], use_container_width=True)
-            
-            # Sleep stats
-            if 'Sleep Duration (hours)' in filtered_data.columns:
-                st.subheader("Sleep Statistics")
-                avg_sleep = filtered_data['Sleep Duration (hours)'].mean()
-                max_sleep = filtered_data['Sleep Duration (hours)'].max()
-                min_sleep = filtered_data['Sleep Duration (hours)'].min()
+            if not weight_df.empty:
+                current_weight = weight_df.iloc[-1][WEIGHT_COL]
+                avg_weight = weight_df[WEIGHT_COL].mean()
+                min_weight = weight_df[WEIGHT_COL].min()
+                max_weight = weight_df[WEIGHT_COL].max()
                 
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Average Sleep", f"{avg_sleep:.2f} hours")
-                col2.metric("Max Sleep", f"{max_sleep:.2f} hours")
-                col3.metric("Min Sleep", f"{min_sleep:.2f} hours")
-        
-        # Weight tab
-        with tabs[1]:
-            st.subheader("Weight Tracking")
-            
-            if 'weight_trend' in charts and charts['weight_trend'] is not None:
-                st.plotly_chart(charts['weight_trend'], use_container_width=True)
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Current Weight", f"{current_weight}")
+                with col2:
+                    st.metric("Average Weight", f"{avg_weight:.1f}")
+                with col3:
+                    st.metric("Min Weight", f"{min_weight}")
+                with col4:
+                    st.metric("Max Weight", f"{max_weight}")
                 
-                # Weight stats
-                if WEIGHT_COL in filtered_data.columns:
-                    st.subheader("Weight Statistics")
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    current_weight = filtered_data[WEIGHT_COL].iloc[-1]
-                    avg_weight = filtered_data[WEIGHT_COL].mean()
-                    min_weight = filtered_data[WEIGHT_COL].min()
-                    max_weight = filtered_data[WEIGHT_COL].max()
-                    
-                    col1.metric("Current Weight", f"{current_weight:.1f}")
-                    col2.metric("Average Weight", f"{avg_weight:.1f}")
-                    col3.metric("Min Weight", f"{min_weight:.1f}")
-                    col4.metric("Max Weight", f"{max_weight:.1f}")
-                    
-                    # Weight change
-                    if len(filtered_data) > 1:
-                        first_weight = filtered_data[WEIGHT_COL].iloc[0]
-                        weight_change = current_weight - first_weight
-                        st.metric(
-                            "Weight Change Over Period", 
-                            f"{weight_change:.1f}", 
-                            delta=f"{weight_change:.1f}"
-                        )
+                # Calculate weight change over the period
+                first_weight = weight_df.iloc[0][WEIGHT_COL]
+                weight_change = current_weight - first_weight
+                
+                st.metric("Weight Change Over Period", f"{weight_change}")
         
-        # Overview tab - general stats and additional metrics
-        with tabs[2]:
-            st.subheader("Daily Routine Overview")
-            
-            # Get stats for wake-up consistency
-            if WAKE_UP_COL in filtered_data.columns:
-                wake_times = filtered_data[WAKE_UP_COL].dropna()
-                if not wake_times.empty:
-                    # Convert time objects to minutes since midnight for calculation
-                    wake_minutes = wake_times.apply(lambda x: x.hour * 60 + x.minute)
-                    avg_wake_time = datetime.min + timedelta(minutes=int(wake_minutes.mean()))
-                    
-                    st.metric("Average Wake-up Time", avg_wake_time.strftime("%H:%M"))
-            
-            # For other metrics, we can dynamically display them
-            other_metrics = [col for col in filtered_data.columns 
-                           if col not in [DATE_COL, WAKE_UP_COL, SLEEP_COL, WEIGHT_COL, 'Sleep Duration (hours)'] 
-                           and pd.api.types.is_numeric_dtype(filtered_data[col])]
-            
-            if other_metrics:
-                st.subheader("Other Metrics")
-                for i in range(0, len(other_metrics), 3):  # Show 3 metrics per row
-                    cols = st.columns(3)
-                    for j, col in enumerate(other_metrics[i:i+3]):
-                        if j < len(cols):
-                            avg_val = filtered_data[col].mean()
-                            cols[j].metric(f"Average {col}", f"{avg_val:.2f}")
+        # Overview section
+        st.header("Daily Routine Overview")
         
-        # Data tab - show the raw data
-        with tabs[3]:
-            st.subheader("Raw Data")
-            st.dataframe(filtered_data)
-            
-            # Option to download the data
+        # Get stats for wake-up consistency
+        if WAKE_UP_COL in filtered_data.columns:
+            try:
+                # Convert wake-up times to datetime and extract hour
+                wake_times = pd.to_datetime(filtered_data[WAKE_UP_COL], 
+                                           format='%I:%M %p', 
+                                           errors='coerce')
+                wake_times = wake_times.dt.hour + wake_times.dt.minute / 60
+                
+                # Calculate consistency (standard deviation of wake-up times)
+                wake_consistency = wake_times.std()
+                
+                st.metric(
+                    "Wake-up Consistency",
+                    f"{wake_consistency:.2f} hours",
+                    help="Lower values indicate more consistent wake-up times"
+                )
+                
+                # Most common wake-up time
+                most_common_wake = filtered_data[WAKE_UP_COL].mode()[0] \
+                    if not filtered_data[WAKE_UP_COL].mode().empty else "N/A"
+                st.metric("Most Common Wake-up Time", most_common_wake)
+                
+            except Exception as e:
+                st.error(f"Error calculating wake-up stats: {e}")
+        
+        # Data section
+        st.header("Raw Data")
+        st.dataframe(filtered_data)
+        
+        # Option to download data as CSV
+        if not filtered_data.empty:
             csv = filtered_data.to_csv(index=False)
             st.download_button(
-                label="Download Data as CSV",
+                label="Download data as CSV",
                 data=csv,
                 file_name="daily_routine_data.csv",
                 mime="text/csv",

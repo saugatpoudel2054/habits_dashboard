@@ -41,13 +41,13 @@ def plot_time_series(df, column, title, y_label, rolling_window=7, figsize=(12, 
 
 def plot_sleep_wake_patterns(df, figsize=(12, 8)):
     """Plot sleep and wake up times on a 24-hour cycle."""
-    if df.empty or SLEEP_COL not in df.columns or WAKE_UP_COL not in df.columns:
+    if df.empty or 'sleep_time' not in df.columns or 'wake_up_time' not in df.columns:
         return None
     
     # Convert time objects to decimal hours for plotting
     df = df.copy()
-    df['wake_decimal'] = df[WAKE_UP_COL].apply(time_to_decimal)
-    df['sleep_decimal'] = df[SLEEP_COL].apply(time_to_decimal)
+    df['wake_decimal'] = df['wake_up_time'].apply(time_to_decimal)
+    df['sleep_decimal'] = df['sleep_time'].apply(time_to_decimal)
     
     # Create figure
     fig = go.Figure()
@@ -223,7 +223,7 @@ def create_dashboard_charts(df):
     charts = {}
     
     # Sleep metrics
-    if SLEEP_COL in df.columns and WAKE_UP_COL in df.columns:
+    if 'sleep_time' in df.columns and 'wake_up_time' in df.columns:
         charts['sleep_pattern'] = plot_sleep_wake_patterns(df)
         
         if 'Sleep Duration (hours)' in df.columns:

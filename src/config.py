@@ -30,7 +30,7 @@ TOKEN_PATH = BASE_DIR / 'credentials' / 'token.json'
 
 # Data columns (customize based on your sheet structure)
 DATE_COL = 'Date'
-WAKE_UP_COL = 'Wake Up'
+WAKE_UP_COL = 'Wake up'
 SLEEP_COL = 'Sleep'
 WEIGHT_COL = 'Weight'
 
